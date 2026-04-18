@@ -172,6 +172,27 @@ fly deploy
 
 The gateway log should show: `[telegram] Connected to Telegram (webhook mode)`.
 
+## Proxy Support
+
+If Telegram's API is blocked or you need to route traffic through a proxy, set a Telegram-specific proxy URL. This takes priority over the generic `HTTPS_PROXY` / `HTTP_PROXY` env vars.
+
+**Option 1: config.yaml (recommended)**
+
+```yaml
+telegram:
+  proxy_url: "socks5://127.0.0.1:1080"
+```
+
+**Option 2: environment variable**
+
+```bash
+TELEGRAM_PROXY=socks5://127.0.0.1:1080
+```
+
+Supported schemes: `http://`, `https://`, `socks5://`.
+
+The proxy applies to both the main Telegram connection and the fallback IP transport. If no Telegram-specific proxy is set, the gateway falls back to `HTTPS_PROXY` / `HTTP_PROXY` / `ALL_PROXY` (or macOS system proxy auto-detection).
+
 ## Home Channel
 
 Use the `/sethome` command in any Telegram chat (DM or group) to designate it as the **home channel**. Scheduled tasks (cron jobs) deliver their results to this channel.
@@ -399,40 +420,6 @@ The current model and provider are displayed at the top. All navigation happens 
 
 :::tip
 If you know the exact model name, type `/model <name>` directly to skip the picker. You can also type `/model <name> --global` to persist the change across sessions.
-:::
-
-## Webhook Mode
-
-By default, the Telegram adapter connects via **long polling** — the gateway makes outbound connections to Telegram's servers. This works everywhere but keeps a persistent connection open.
-
-**Webhook mode** is an alternative where Telegram pushes updates to your server over HTTPS. This is ideal for **serverless and cloud deployments** (Fly.io, Railway, etc.) where inbound HTTP can wake a suspended machine.
-
-### Configuration
-
-Set the `TELEGRAM_WEBHOOK_URL` environment variable to enable webhook mode:
-
-```bash
-# Required — your public HTTPS endpoint
-TELEGRAM_WEBHOOK_URL=https://app.fly.dev/telegram
-
-# Optional — local listen port (default: 8443)
-TELEGRAM_WEBHOOK_PORT=8443
-
-# Optional — secret token for update verification (auto-generated if not set)
-TELEGRAM_WEBHOOK_SECRET=my-secret-token
-```
-
-Or in `~/.hermes/config.yaml`:
-
-```yaml
-telegram:
-  webhook_mode: true
-```
-
-When `TELEGRAM_WEBHOOK_URL` is set, the gateway starts an HTTP server listening on `0.0.0.0:<port>` and registers the webhook URL with Telegram. The URL path is extracted from the webhook URL (defaults to `/telegram`).
-
-:::warning
-Telegram requires a **valid TLS certificate** on the webhook endpoint. Self-signed certificates will be rejected. Use a reverse proxy (nginx, Caddy) or a platform that provides TLS termination (Fly.io, Railway, Cloudflare Tunnel).
 :::
 
 ## DNS-over-HTTPS Fallback IPs
